@@ -2,7 +2,7 @@
 <html lang="zh-CN">  
 <head>  
     <meta charset="UTF-8">  
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">  
     <title>水果老虎机</title>  
     <script src="https://cdn.tailwindcss.com"></script>  
     <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>  
@@ -15,6 +15,10 @@
         }  
         .slot-spin {  
             animation: vertical-spin 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;  
+        }  
+        body {  
+            touch-action: manipulation;  
+            overscroll-behavior-y: contain;  
         }  
     </style>  
 </head>  
@@ -37,12 +41,12 @@
 
         const SlotColumn = ({ symbols, isSpinning }) => {  
             return (  
-                <div className="flex flex-col items-center w-24 h-96 overflow-hidden border-2 rounded-lg shadow-md">  
+                <div className="flex flex-col items-center w-16 sm:w-24 h-64 sm:h-96 overflow-hidden border-2 rounded-lg shadow-md">  
                     {symbols.map((symbol, index) => (  
                         <div   
                             key={index}   
                             className={`  
-                                text-5xl h-24 w-full flex items-center justify-center   
+                                text-3xl sm:text-5xl h-16 sm:h-24 w-full flex items-center justify-center   
                                 ${isSpinning ? 'slot-spin' : ''}  
                                 border-b last:border-b-0 transition-all  
                                 ${index === 2 ? 'bg-yellow-50' : ''}  
@@ -185,22 +189,22 @@
             };  
 
             return (  
-                <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-yellow-100">  
-                    <div className="bg-white p-8 rounded-2xl shadow-2xl text-center w-full max-w-3xl">  
-                        <h1 className="text-4xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-yellow-600">  
+                <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-yellow-100 p-4">  
+                    <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-2xl text-center w-full max-w-md">  
+                        <h1 className="text-2xl sm:text-4xl font-bold mb-4 sm:mb-6 text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-yellow-600">  
                             水果老虎机  
                         </h1>  
                         
                         {/* 余额显示 */}  
-                        <div className="mb-6 text-2xl font-semibold flex justify-center items-center">  
-                            <span className="mr-4">💰 当前余额:</span>  
-                            <span className="bg-green-100 px-4 py-2 rounded-full text-green-800">  
+                        <div className="mb-4 sm:mb-6 text-xl sm:text-2xl font-semibold flex justify-center items-center">  
+                            <span className="mr-2 sm:mr-4">💰 当前余额:</span>  
+                            <span className="bg-green-100 px-2 sm:px-4 py-1 sm:py-2 rounded-full text-green-800">  
                                 {balance} 金币  
                             </span>  
                         </div>  
 
                         {/* 轮盘区域 */}  
-                        <div className="grid grid-cols-4 gap-4 mb-6 justify-center">  
+                        <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6 justify-center">  
                             {slots.map((slot, index) => (  
                                 <SlotColumn   
                                     key={index}   
@@ -222,7 +226,7 @@
                             onClick={spinSlots}   
                             disabled={isSpinning || balance < 50}  
                             className={`  
-                                w-full py-3 rounded-lg text-white font-bold text-xl  
+                                w-full py-2 sm:py-3 rounded-lg text-white font-bold text-lg sm:text-xl  
                                 ${isSpinning || balance < 50   
                                     ? 'bg-gray-400 cursor-not-allowed'   
                                     : 'bg-gradient-to-r from-green-500 to-yellow-500 hover:from-green-600 hover:to-yellow-600'}  
@@ -236,12 +240,12 @@
                         </button>  
 
                         {/* 游戏说明 */}  
-                        <div className="mt-6 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">  
-                            <p className="font-bold mb-2">🏆 奖励规则：</p>  
+                        <div className="mt-4 sm:mt-6 text-xs sm:text-sm text-gray-600 bg-gray-50 p-2 sm:p-4 rounded-lg">  
+                            <p className="font-bold mb-1 sm:mb-2">🏆 奖励规则：</p>  
                             <p>🥇 4个相同：超级大奖 +5000金币</p>  
                             <p>🥈 3个相同：大奖 +1000金币</p>  
                             <p>🥉 2个相同：中奖 +200金币</p>  
-                            <p className="text-red-500 mt-2">每次旋转扣除50金币</p>  
+                            <p className="text-red-500 mt-1 sm:mt-2">每次旋转扣除50金币</p>  
                             <p className="text-blue-500">以第三行为中奖判定线</p>  
                         </div>  
                     </div>  
