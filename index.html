@@ -1,260 +1,445 @@
-<!DOCTYPE html>  
-<html lang="zh-CN">  
-<head>  
-    <meta charset="UTF-8">  
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">  
-    <title>水果老虎机</title>  
-    <script src="https://cdn.tailwindcss.com"></script>  
-    <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>  
-    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>  
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>  
-    <style>  
-        @keyframes vertical-spin {  
-            0% { transform: translateY(-100%); opacity: 0.5; }  
-            100% { transform: translateY(0); opacity: 1; }  
-        }  
-        .slot-spin {  
-            animation: vertical-spin 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;  
-        }  
-        body {  
-            touch-action: manipulation;  
-            overscroll-behavior-y: contain;  
-        }  
-    </style>  
-</head>  
-<body>  
-    <div id="root"></div>  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyper Slot Machine</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@17/umd/react.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
+        @keyframes coinRain {
+            0% { 
+                transform: translateY(-100%) rotate(0deg);
+                opacity: 1;
+            }
+            100% { 
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        body {
+            background-image: url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDF8fG1vY2t8ZW58MHx8fHwxNjc4NzYyNzY0&ixlib=rb-4.0.3&q=80&w=1080');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
 
-    <script type="text/babel">  
-        // 音效资源  
-        const SOUND_URLS = {  
-            spin: 'https://raw.githubusercontent.com/mdn/learning-area/master/javascript/building-blocks/audio-video-media/media/button-press.mp3',  
-            win: 'https://raw.githubusercontent.com/mdn/learning-area/master/javascript/building-blocks/audio-video-media/media/ding.mp3'  
-        };  
+        .shake {
+            animation: shake 0.5s;
+        }
 
-        // 老虎机图标（纯水果主题）  
-        const SYMBOLS = [  
-            '🍎', '🍐', '🍊', '🍋',   
-            '🍌', '🍉', '🍇', '🍓',   
-            '🥝', '🍒', '🍍', '🍈'  
-        ];  
+        .coin-drop {
+            position: absolute;
+            top: 0;
+            font-size: 24px;
+            animation: coinRain 1s forwards;
+        }
 
-        const SlotColumn = ({ symbols, isSpinning }) => {  
-            return (  
-                <div className="flex flex-col items-center w-16 sm:w-24 h-64 sm:h-96 overflow-hidden border-2 rounded-lg shadow-md">  
-                    {symbols.map((symbol, index) => (  
-                        <div   
-                            key={index}   
-                            className={`  
-                                text-3xl sm:text-5xl h-16 sm:h-24 w-full flex items-center justify-center   
-                                ${isSpinning ? 'slot-spin' : ''}  
-                                border-b last:border-b-0 transition-all  
-                                ${index === 2 ? 'bg-yellow-50' : ''}  
-                            `}  
-                        >  
-                            {symbol}  
-                        </div>  
-                    ))}  
-                </div>  
-            );  
-        };  
+        .winning-symbol {
+            border: 2px solid gold;
+            border-radius: 10px;
+            padding: 5px;
+            background-color: rgba(255, 215, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <audio id="background-music" loop>
+        <source src="https://www.bensound.com/bensound-music/bensound-ukulele.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+    </audio>
+    <audio id="spin-sound">
+        <source src="https://www.soundjay.com/button/sounds/button-3.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+    </audio>
+    <audio id="stop-sound">
+        <source src="https://www.soundjay.com/button/sounds/button-9.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+    </audio>
+    <audio id="roll-sound" loop>
+        <source src="https://www.soundjay.com/button/sounds/button-10.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+    </audio>
+    <audio id="small-win-sound">
+        <source src="https://www.soundjay.com/button/sounds/button-11.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+    </audio>
+    <audio id="big-win-sound">
+        <source src="https://www.soundjay.com/button/sounds/button-12.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+    </audio>
 
-        const SlotMachine = () => {  
-            // 音效状态  
-            const [sounds, setSounds] = React.useState({  
-                spin: null,  
-                win: null  
-            });  
+    <script type="text/babel">
+        const SYMBOLS = ['🍒', '🍇', '🍊', '🍋', '🍉', '🍎', '🔔', '💎', '⭐'];
 
-            // 4个轮盘，每个轮盘4个图标  
-            const [slots, setSlots] = React.useState(  
-                Array(4).fill().map(() => ({  
-                    symbols: [  
-                        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],  
-                        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],  
-                        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],  
-                        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]  
-                    ],  
-                    isSpinning: false  
-                }))  
-            );  
+        const WINNING_COMBINATIONS = {
+            '🍒🍒🍒': { multiplier: 2, name: 'Cherry Triple' },
+            '🍇🍇🍇': { multiplier: 3, name: 'Grape Triple' },
+            '🍊🍊🍊': { multiplier: 4, name: 'Orange Triple' },
+            '🍋🍋🍋': { multiplier: 5, name: 'Lemon Triple' },
+            '🍉🍉🍉': { multiplier: 6, name: 'Watermelon Triple' },
+            '🍎🍎🍎': { multiplier: 7, name: 'Apple Triple' },
+            '🔔🔔🔔': { multiplier: 8, name: 'Bell Triple' },
+            '💎💎💎': { multiplier: 10, name: 'Diamond Triple' },
+            '⭐⭐⭐': { multiplier: 15, name: 'Star Triple' }
+        };
 
-            const [isSpinning, setIsSpinning] = React.useState(false);  
-            const [balance, setBalance] = React.useState(5000);  
+        const CoinRain = ({ count = 20 }) => {
+            return (
+                <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+                    {[...Array(count)].map((_, index) => (
+                        <div 
+                            key={index} 
+                            className="absolute coin-drop"
+                            style={{
+                                left: `${Math.random() * 100}%`,
+                                animationDelay: `${Math.random() * 2}s`,
+                                fontSize: `${30 + Math.random() * 30}px`
+                            }}
+                        >
+                            🪙
+                        </div>
+                    ))}
+                </div>
+            );
+        };
 
-            // 预加载音效  
-            React.useEffect(() => {  
-                const loadSound = async (url) => {  
-                    try {  
-                        const response = await fetch(url);  
-                        const blob = await response.blob();  
-                        const audioUrl = URL.createObjectURL(blob);  
-                        return new Audio(audioUrl);  
-                    } catch (error) {  
-                        console.error('音效加载失败:', url, error);  
-                        return null;  
-                    }  
-                };  
+        const SlotMachine = () => {
+            const [columns, setColumns] = React.useState([
+                { symbols: [], isSpinning: false },
+                { symbols: [], isSpinning: false },
+                { symbols: [], isSpinning: false }
+            ]);
 
-                const loadSounds = async () => {  
-                    const spinSound = await loadSound(SOUND_URLS.spin);  
-                    const winSound = await loadSound(SOUND_URLS.win);  
+            const [beginGame, setBeginGame] = React.useState(false);
+            const [balance, setBalance] = React.useState(100);
+            const [lastWin, setLastWin] = React.useState(null);
+            const [shakeEffect, setShakeEffect] = React.useState(false);
+            const [winEffect, setWinEffect] = React.useState({
+                coinRain: false
+            });
+
+            const spinIntervals = React.useRef([null, null, null]);
+
+            const triggerWinEffects = () => {
+                setWinEffect({
+                    coinRain: true
+                });
+
+                setTimeout(() => {
+                    setWinEffect({
+                        coinRain: false
+                    });
+                }, 3000);
+            };
+
+            React.useEffect(() => {
+                resetSlotMachine();
+                const backgroundMusic = document.getElementById('background-music');
+                backgroundMusic.play();
+                
+                return () => {
+                    spinIntervals.current.forEach(interval => {
+                        if (interval) clearInterval(interval);
+                    });
+                };
+            }, []);
+
+            const generateSymbols = () => {
+                return Array.from({ length: 3 }, () => 
+                    SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]
+                );
+            };
+
+            const checkWinningCondition = () => {
+                const winningConditions = [];
+                
+                for (let rowIndex = 0; rowIndex < 3; rowIndex++) {
+                    if (columns[0].symbols[rowIndex] === columns[1].symbols[rowIndex]) {
+                        winningConditions.push({
+                            type: 'small',
+                            symbols: [columns[0].symbols[rowIndex], columns[1].symbols[rowIndex]],
+                            multiplier: 1,
+                            description: `Row ${rowIndex + 1}: First two columns match`
+                        });
+                    }
                     
-                    setSounds({  
-                        spin: spinSound,  
-                        win: winSound  
-                    });  
-                };  
-
-                loadSounds();  
-            }, []);  
-
-            const playSound = (soundType) => {  
-                const sound = sounds[soundType];  
-                if (sound) {  
-                    try {  
-                        sound.currentTime = 0;  
-                        sound.play().catch(error => {  
-                            console.log(`${soundType}音效播放错误:`, error);  
-                        });  
-                    } catch (error) {  
-                        console.log(`${soundType}音效播放异常:`, error);  
-                    }  
-                }  
-            };  
-
-            const spinSlots = () => {  
-                if (isSpinning || balance < 50) return;  
-
-                // 播放旋转音效  
-                playSound('spin');  
-
-                setBalance(prev => prev - 50);  
-                setIsSpinning(true);  
-
-                // 生成新的轮盘图标  
-                const newSlots = slots.map(() => ({  
-                    symbols: [  
-                        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],  
-                        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],  
-                        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],  
-                        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]  
-                    ],  
-                    isSpinning: true  
-                }));  
-
-                // 模拟轮盘旋转  
-                slots.forEach((_, index) => {  
-                    setTimeout(() => {  
-                        setSlots(prevSlots => {  
-                            const updatedSlots = [...prevSlots];  
-                            updatedSlots[index] = newSlots[index];  
-                            return updatedSlots;  
-                        });  
-                    }, 200 * (index + 1));  
-                });  
-
-                // 停止旋转和奖励计算  
-                setTimeout(() => {  
-                    // 计算中奖逻辑（以第三行为准）  
-                    const middleSymbols = newSlots.map(slot => slot.symbols[2]);  
-                    const symbolCounts = {};  
+                    if (columns[1].symbols[rowIndex] === columns[2].symbols[rowIndex]) {
+                        winningConditions.push({
+                            type: 'small',
+                            symbols: [columns[1].symbols[rowIndex], columns[2].symbols[rowIndex]],
+                            multiplier: 1,
+                            description: `Row ${rowIndex + 1}: Last two columns match`
+                        });
+                    }
                     
-                    middleSymbols.forEach(symbol => {  
-                        symbolCounts[symbol] = (symbolCounts[symbol] || 0) + 1;  
-                    });  
-
-                    const maxCount = Math.max(...Object.values(symbolCounts));  
-                    let prize = 0;  
-
-                    if (maxCount === 4) {  
-                        prize = 5000;  
-                        // 播放中奖音效  
-                        playSound('win');  
-                        alert(`🎉 超级大奖！全部相同！奖金 +${prize}`);  
-                    } else if (maxCount === 3) {  
-                        prize = 1000;  
-                        alert(`🌟 大奖！3个相同！奖金 +${prize}`);  
-                    } else if (maxCount === 2) {  
-                        prize = 200;  
-                        alert(`✨ 中奖！2个相同！奖金 +${prize}`);  
-                    }  
-
-                    setBalance(prev => prev + prize);  
-                    setIsSpinning(false);  
-                    
-                    // 更新轮盘状态  
-                    setSlots(newSlots.map(slot => ({ ...slot, isSpinning: false })));  
-                }, 2000);  
-            };  
-
-            return (  
-                <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-yellow-100 p-4">  
-                    <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-2xl text-center w-full max-w-md">  
-                        <h1 className="text-2xl sm:text-4xl font-bold mb-4 sm:mb-6 text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-yellow-600">  
-                            水果老虎机  
-                        </h1>  
+                    if (columns[0].symbols[rowIndex] === columns[1].symbols[rowIndex] && 
+                        columns[1].symbols[rowIndex] === columns[2].symbols[rowIndex]) {
+                        const winningSymbol = columns[0].symbols[rowIndex];
+                        const existingCombo = WINNING_COMBINATIONS[winningSymbol.repeat(3)];
                         
-                        {/* 余额显示 */}  
-                        <div className="mb-4 sm:mb-6 text-xl sm:text-2xl font-semibold flex justify-center items-center">  
-                            <span className="mr-2 sm:mr-4">💰 当前余额:</span>  
-                            <span className="bg-green-100 px-2 sm:px-4 py-1 sm:py-2 rounded-full text-green-800">  
-                                {balance} 金币  
-                            </span>  
-                        </div>  
+                        winningConditions.push({
+                            type: 'full',
+                            symbols: [winningSymbol, winningSymbol, winningSymbol],
+                            multiplier: existingCombo ? existingCombo.multiplier : 2,
+                            name: existingCombo ? existingCombo.name : 'Triple Match',
+                            description: `Row ${rowIndex + 1}: All columns match`
+                        });
+                    }
+                }
 
-                        {/* 轮盘区域 */}  
-                        <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6 justify-center">  
-                            {slots.map((slot, index) => (  
-                                <SlotColumn   
-                                    key={index}   
-                                    symbols={slot.symbols}   
-                                    isSpinning={slot.isSpinning}   
-                                />  
-                            ))}  
-                        </div>  
+                if (winningConditions.length > 0) {
+                    let totalWinAmount = 0;
+                    
+                    winningConditions.forEach(condition => {
+                        const winAmount = 10 * condition.multiplier;
+                        totalWinAmount += winAmount;
+                    });
 
-                        {/* 中奖线 */}  
-                        <div className="relative w-full mb-4">  
-                            <div className="absolute left-0 right-0 flex justify-center">  
-                                <div className="h-1 w-full max-w-3xl bg-red-500 opacity-50"></div>  
-                            </div>  
-                        </div>  
+                    setBalance(prevBalance => prevBalance + totalWinAmount);
+                    
+                    setLastWin({
+                        conditions: winningConditions,
+                        totalAmount: totalWinAmount
+                    });
 
-                        {/* 旋转按钮 */}  
-                        <button   
-                            onClick={spinSlots}   
-                            disabled={isSpinning || balance < 50}  
-                            className={`  
-                                w-full py-2 sm:py-3 rounded-lg text-white font-bold text-lg sm:text-xl  
-                                ${isSpinning || balance < 50   
-                                    ? 'bg-gray-400 cursor-not-allowed'   
-                                    : 'bg-gradient-to-r from-green-500 to-yellow-500 hover:from-green-600 hover:to-yellow-600'}  
-                                transition-all duration-300  
-                            `}  
-                        >  
-                            {balance < 50   
-                                ? '余额不足'   
-                                : (isSpinning ? '旋转中...' : '开始旋转 (50金币)')  
-                            }  
-                        </button>  
+                    triggerWinEffects();
+                    setShakeEffect(true);
 
-                        {/* 游戏说明 */}  
-                        <div className="mt-4 sm:mt-6 text-xs sm:text-sm text-gray-600 bg-gray-50 p-2 sm:p-4 rounded-lg">  
-                            <p className="font-bold mb-1 sm:mb-2">🏆 奖励规则：</p>  
-                            <p>🥇 4个相同：超级大奖 +5000金币</p>  
-                            <p>🥈 3个相同：大奖 +1000金币</p>  
-                            <p>🥉 2个相同：中奖 +200金币</p>  
-                            <p className="text-red-500 mt-1 sm:mt-2">每次旋转扣除50金币</p>  
-                            <p className="text-blue-500">以第三行为中奖判定线</p>  
-                        </div>  
-                    </div>  
-                </div>  
-            );  
-        };  
+                    // 播放小胜音效
+                    if (winningConditions.some(condition => condition.type === 'small')) {
+                        const smallWinSound = document.getElementById('small-win-sound');
+                        smallWinSound.currentTime = 0; // 重置音效播放时间
+                        smallWinSound.play();
+                    }
 
-        // 渲染应用  
-        ReactDOM.render(<SlotMachine />, document.getElementById('root'));  
-    </script>  
-</body>  
-</html>  
+                    // 播放全胜音效
+                    if (winningConditions.some(condition => condition.type === 'full')) {
+                        const bigWinSound = document.getElementById('big-win-sound');
+                        bigWinSound.currentTime = 0; // 重置音效播放时间
+                        bigWinSound.play();
+                    }
+
+                    // 震动效果持续时间
+                    setTimeout(() => {
+                        setShakeEffect(false);
+                    }, 500);
+
+                    return true;
+                }
+                
+                return false;
+            };
+
+            const resetSlotMachine = () => {
+                spinIntervals.current.forEach(interval => {
+                    if (interval) clearInterval(interval);
+                });
+
+                setColumns(columns.map(() => ({
+                    symbols: generateSymbols(),
+                    isSpinning: false
+                })));
+
+                spinIntervals.current = [null, null, null];
+                setBeginGame(false);
+                setLastWin(null);
+            };
+
+            const toggleColumnSpin = (index) => {
+                setColumns(prevColumns => {
+                    const newColumns = [...prevColumns];
+                    const isCurrentlySpinning = newColumns[index].isSpinning;
+
+                    if (isCurrentlySpinning) {
+                        if (spinIntervals.current[index]) {
+                            clearInterval(spinIntervals.current[index]);
+                            spinIntervals.current[index] = null;
+                        }
+                        
+                        newColumns[index] = {
+                            ...newColumns[index],
+                            isSpinning: false
+                        };
+
+                        // 播放停止音效
+                        const stopSound = document.getElementById('stop-sound');
+                        stopSound.currentTime = 0; // 重置音效播放时间
+                        stopSound.play();
+
+                        if (beginGame && !newColumns.some(col => col.isSpinning)) {
+                            checkWinningCondition();
+                        }
+                    } 
+                    else {
+                        spinIntervals.current[index] = setInterval(() => {
+                            setColumns(currentColumns => {
+                                const updatedColumns = [...currentColumns];
+                                updatedColumns[index] = {
+                                    ...updatedColumns[index],
+                                    symbols: generateSymbols()
+                                };
+                                return updatedColumns;
+                            });
+                        }, 30);
+
+                        newColumns[index] = {
+                            ...newColumns[index],
+                            isSpinning: true
+                        };
+
+                        // 播放滚动音效
+                        const rollSound = document.getElementById('roll-sound');
+                        rollSound.currentTime = 0; // 重置音效播放时间
+                        rollSound.play();
+                    }
+
+                    return newColumns;
+                });
+            };
+
+            const startGlobalSpin = () => {
+                setBalance(prevBalance => prevBalance - 10);
+                setLastWin(null);
+
+                // 播放启动音效
+                const spinSound = document.getElementById('spin-sound');
+                spinSound.currentTime = 0; // 重置音效播放时间
+                spinSound.play();
+
+                setColumns(prevColumns => 
+                    prevColumns.map((column, index) => {
+                        if (!column.isSpinning) {
+                            spinIntervals.current[index] = setInterval(() => {
+                                setColumns(currentColumns => {
+                                    const updatedColumns = [...currentColumns];
+                                    updatedColumns[index] = {
+                                        ...updatedColumns[index],
+                                        symbols: generateSymbols()
+                                    };
+                                    return updatedColumns;
+                                });
+                            }, 30);
+
+                            return { ...column, isSpinning: true };
+                        }
+                        return column;
+                    })
+                );
+
+                setBeginGame(true);
+            };
+
+            return (
+                <div 
+                    className={`flex flex-col items-center justify-center min-h-screen p-4 
+                        bg-black bg-opacity-40 backdrop-blur-sm
+                        ${shakeEffect ? 'shake' : ''}`}
+                >
+                    {winEffect.coinRain && <CoinRain />}
+
+                    <h1 className="text-4xl font-bold mb-6 text-white drop-shadow-lg">Hyper Slot Machine</h1>
+                    
+                    <div className="flex space-x-4 mb-4 text-white bg-black/30 p-2 rounded-lg">
+                        <div>Balance: ${balance}</div>
+                        {lastWin && (
+                            <div className="text-green-400">
+                                Win: ${lastWin.totalAmount}
+                                {lastWin.conditions.map((condition, index) => (
+                                    <div key={index} className="text-sm">
+                                        {condition.type === 'small' ? '小胜' : '全胜'}: 
+                                        {condition.description}
+                                        {condition.symbols.join('')} 
+                                        (x{condition.multiplier})
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex space-x-4 mb-6 relative z-10">
+                        {columns.map((column, index) => (
+                            <div 
+                                key={index} 
+                                className={`flex flex-col items-center p-4 rounded-lg 
+                                    ${column.isSpinning ? 'bg-yellow-500/50' : 'bg-white/20'} 
+                                    shadow-2xl border-2 border-white/20 transition-colors duration-300 cursor-pointer`}
+                                onClick={() => toggleColumnSpin(index)}
+                            >
+                                {column.symbols.map((symbol, symbolIndex) => (
+                                    <div 
+                                        key={symbolIndex} 
+                                        className={`text-6xl m-2 transition-transform duration-100 
+                                            ${column.isSpinning ? 'animate-pulse' : ''}`}
+                                    >
+                                        {symbol}
+                                    </div>
+                                ))}
+                                <div className="mt-2 text-sm text-gray-300">
+                                    {column.isSpinning ? 'STOP' : 'SPIN'}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex space-x-4 relative z-10">
+                        <button 
+                            onClick={startGlobalSpin} 
+                            disabled={balance < 10}
+                            className="px-6 py-3 bg-green-600 text-white rounded-lg 
+                            hover:bg-green-700 transition-colors uppercase font-bold tracking-wider 
+                            shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Spin All (Bet $10)
+                        </button>
+                        <button 
+                            onClick={resetSlotMachine} 
+                            className="px-6 py-3 bg-red-600 text-white rounded-lg 
+                            hover:bg-red-700 transition-colors uppercase font-bold tracking-wider 
+                            shadow-lg active:scale-95"
+                        >
+                            Reset Machine
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<SlotMachine />, document.getElementById('root'));
+    </script>
+<script>window.parent.postMessage({ action: "ready" }, "*"); 
+ 
+window.console = new Proxy(console, {
+  get(target, prop) {
+    if (['log', 'warn', 'error'].includes(prop)) {
+      return new Proxy(target[prop], {
+        apply(fn, thisArg, args) {
+          fn.apply(thisArg, args);
+          window.parent.postMessage({ action: 'console', 
+            type: prop, 
+            args: args.map((arg) => {
+              try {
+                return JSON.stringify(arg).replace(/^["']|["']$/g, '');
+              } catch (e) {
+                return arg;
+              }
+            }) 
+          }, '*');
+        }
+      });
+    }
+    return target[prop];
+  }
+});
+</script></body>
+</html>
